@@ -23,7 +23,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,7 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RELAYS_COUNT 4
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -41,7 +40,7 @@
 #define STR1(x) #x
 #define STR(x) STR1(x)
 
-#define RELAYS_COUNT 4
+// #define HAL_UART_Transmit(&huart1, text) HAL_UART_Transmit(&huart1, text, strlen(text), 1000, 100);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -71,6 +70,8 @@ uint16_t ledPins[] = {
     LED1_Pin,
     LED2_Pin,
     LED3_Pin};
+
+uint8_t currentlyActiveRelay;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +96,7 @@ void relayWrite(uint8_t relayNo, uint8_t set)
   turnOffAllRelays();
   HAL_GPIO_WritePin(relayPorts[relayNo], relayPins[relayNo], reversePinStateIf(set ? GPIO_PIN_SET : GPIO_PIN_RESET, relayNo == 0));
   HAL_GPIO_WritePin(ledPorts[relayNo], ledPins[relayNo], !set ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  currentlyActiveRelay = relayNo;
 }
 /* USER CODE END PFP */
 
@@ -139,38 +141,56 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_UART_Transmit(&huart1, "test\r\n", 6, 1000);
-  // printf(STR(BUILD_ID) "\r\n");
+  HAL_UART_Transmit(&huart1, STR(BUILD_ID) "\r\n", 2 + strlen(STR(BUILD_ID)), 100);
   // printf("UID: 0x%08X 0x%08X 0x%08X\r\n", HAL_GetUIDw0(), HAL_GetUIDw1(), HAL_GetUIDw2());
+
   uint8_t activePin = 0;
   relayWrite(activePin, 1);
 
   // there is some magic issue and button is pressed right after reset.
-  while (GPIO_PIN_SET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
-    HAL_Delay(100);
+  // while (GPIO_PIN_SET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
+  HAL_Delay(100);
 
+  char UART1_rxBuffer[1] = {0};
   while (1)
   {
 
-    // HAL_Delay(500);
-    if (GPIO_PIN_SET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
+    if (currentlyActiveRelay != activePin)
+    {
+      relayWrite(activePin, 1);
+      HAL_UART_Transmit(&huart1, "change\r\n", 8, 100);
+    }
+
+    if (HAL_OK == HAL_UART_Receive(&huart1, UART1_rxBuffer, 1, 50) && UART1_rxBuffer[0] != 0x00)
+    {
+      HAL_UART_Transmit(&huart1, "got uart data\r\n", 15, 100);
+      HAL_UART_Transmit(&huart1, UART1_rxBuffer, 1, 100);
+      HAL_UART_Transmit(&huart1, "\r\n", 2, 100);
+      switch (UART1_rxBuffer[0])
+      {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+        HAL_UART_Transmit(&huart1, "activating pin X: X\r\n", 18, 100);
+        activePin = UART1_rxBuffer[0] - '0';
+        break;
+      case '?':
+        HAL_UART_Transmit(&huart1, "active pin: X\r\n", 15, 100);
+      }
+    }
+
+    if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
     {
       activePin++;
       activePin %= RELAYS_COUNT;
-      relayWrite(activePin, 1);
-
       // debounce
-      while (GPIO_PIN_SET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
-        HAL_Delay(100);
+      do
+      {
+        HAL_Delay(50);
+      } while (GPIO_PIN_RESET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin));
     }
-    HAL_Delay(150);
 
-    // for (int active = 0; active < RELAYS_COUNT; active++)
-    // {
-    //   relayWrite(active, 1);
-    //   printf("activate %d\r\n", active);
-    //   HAL_Delay(125);
-    // }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
