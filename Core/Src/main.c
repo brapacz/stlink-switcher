@@ -140,24 +140,24 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   printf(STR(BUILD_ID) "\r\n");
-  printf("UID: 0x%08X 0x%08X 0x%08X\r\n", HAL_GetUIDw0(), HAL_GetUIDw1(), HAL_GetUIDw2());
+  // printf("UID: 0x%08X 0x%08X 0x%08X\r\n", HAL_GetUIDw0(), HAL_GetUIDw1(), HAL_GetUIDw2());
   uint8_t activePin = 0;
   relayWrite(activePin, 1);
   while (1)
   {
 
-    HAL_Delay(500);
-    // if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
+    // HAL_Delay(500);
+    if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
     {
       activePin++;
       activePin %= RELAYS_COUNT;
       relayWrite(activePin, 1);
 
-      // // debounce
-      // while (GPIO_PIN_RESET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
-      //   HAL_Delay(100);
-      // HAL_Delay(50);
+      // debounce
+      while (GPIO_PIN_RESET == HAL_GPIO_ReadPin(CHANGE_GPIO_Port, CHANGE_Pin))
+        HAL_Delay(100);
     }
+    HAL_Delay(50);
 
     // for (int active = 0; active < RELAYS_COUNT; active++)
     // {
