@@ -2,6 +2,8 @@
 
 This project exist to utilize a single st-link programmer, tiny STM32F042F6P6 and USB to serial adapter to program multiple MCU with single `make flash` command, instead of switching cables between breadboards back and forth. SWDIO and GND pins are connected to every single MCU in form of a daisy chain, while SWDCLK is connected to relays, which are conecting it to choosen MCU. To choose selected MCU you just have to send number between 0 and 3 to serial port.
 
+**In it's essence, it's a relay board with port0 as default controller by serial port.**
+
 I used simple relays controller by transistors and tiny MCU because I had it on hand, but if I had to do it again, a would rather take 4 relays module and simplest Nucleo or even an Arduino board. Plus of the STM32F042F6P6 is that it could be used with USB wired directly to the MCU and could save me using an USB to serial adapter.
 
 **Important:** Relay 0 is default, and it must be connected to normally open side, while other must be normally close. I used it to program st-link switcher while is connected to st-link via Relay 0.
